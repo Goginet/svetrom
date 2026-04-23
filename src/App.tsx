@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BoatDiagram, type RigControls } from "./components/BoatDiagram";
+import { useDeviceWindAngle } from "./hooks/useDeviceWindAngle";
 
 const INITIAL_CONTROLS: RigControls = {
   boomLength: 180,
@@ -110,6 +111,7 @@ const CONTROL_CONFIG = [
 function App() {
   const [controls, setControls] = useState<RigControls>(INITIAL_CONTROLS);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const deviceWind = useDeviceWindAngle();
 
   const primaryControls = useMemo(
     () => CONTROL_CONFIG.filter((item) => item.primary),
@@ -137,6 +139,31 @@ function App() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isSettingsOpen]);
+
+  useEffect(() => {
+    if (!deviceWind.isEnabled || deviceWind.angle === null) {
+      return;
+    }
+
+    const nextWindAngle = deviceWind.angle;
+
+    setControls((current) => {
+      const nextBoomAngle = -nextWindAngle / 2;
+
+      if (
+        current.windAngle === nextWindAngle &&
+        current.boomAngle === nextBoomAngle
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        windAngle: nextWindAngle,
+        boomAngle: nextBoomAngle,
+      };
+    });
+  }, [deviceWind.angle, deviceWind.isEnabled]);
 
   const updateControl = <Key extends keyof RigControls>(key: Key, value: number) => {
     setControls((current) => ({
@@ -203,12 +230,59 @@ function App() {
                   max={item.max}
                   step={item.step}
                   value={controls[item.key]}
+                  disabled={deviceWind.isEnabled}
                   onChange={(event) =>
                     updateControl(item.key, Number(event.target.value))
                   }
                 />
               </label>
             ))}
+          </div>
+
+          <div className="sensor-bar">
+            <div className="sensor-bar__copy">
+              <strong>Поворот телефона</strong>
+              <span>
+                {deviceWind.isEnabled
+                  ? "Угол ветра управляется датчиком устройства."
+                  : "Можно привязать угол ветра к повороту телефона."}
+              </span>
+              {deviceWind.error ? (
+                <span className="sensor-bar__message">{deviceWind.error}</span>
+              ) : null}
+            </div>
+
+            <div className="sensor-bar__actions">
+              {deviceWind.isEnabled ? (
+                <>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => deviceWind.calibrate()}
+                  >
+                    Переустановить ноль
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => deviceWind.disable()}
+                  >
+                    Отключить датчик
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={!deviceWind.isSupported}
+                  onClick={() => {
+                    void deviceWind.enable();
+                  }}
+                >
+                  Включить поворот телефона
+                </button>
+              )}
+            </div>
           </div>
         </section>
       </section>
