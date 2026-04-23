@@ -15,6 +15,7 @@ export interface RigControls {
 
 type BoatDiagramProps = {
   controls: RigControls;
+  mode?: "embedded" | "fullscreen";
 };
 
 const MAST = { x: 220, y: 220 };
@@ -34,7 +35,10 @@ type SelectedElement =
 
 const format = (value: number) => value.toFixed(1);
 
-export const BoatDiagram = ({ controls }: BoatDiagramProps) => {
+export const BoatDiagram = ({
+  controls,
+  mode = "embedded",
+}: BoatDiagramProps) => {
   const [selectedElement, setSelectedElement] = useState<SelectedElement>(null);
   const boomScreenAngle = -90 + controls.boomAngle;
   const boomAngleInRadians = (boomScreenAngle * Math.PI) / 180;
@@ -120,6 +124,81 @@ export const BoatDiagram = ({ controls }: BoatDiagramProps) => {
     `Q ${format(pointC.x)} ${format(pointC.y)} ${format(pointA.x)} ${format(pointA.y)}`,
     "Z",
   ].join(" ");
+
+  const viewBox = useMemo(() => {
+    if (mode === "embedded") {
+      return {
+        minX: -200,
+        minY: 0,
+        width: 840,
+        height: 440,
+      };
+    }
+
+    const xs = [
+      pointA.x,
+      pointB.x,
+      pointCBase.x,
+      pointC.x,
+      windPoint.x,
+      MAST.x,
+      leftMidshipX,
+      rightMidshipX,
+      leftTransomX,
+      rightTransomX,
+      entryTopControl.x,
+      entryBottomControl.x,
+    ];
+    const ys = [
+      pointA.y,
+      pointB.y,
+      pointCBase.y,
+      pointC.y,
+      windPoint.y,
+      bowY,
+      sternY,
+      midshipY,
+      entryTopControl.y,
+      entryBottomControl.y,
+    ];
+
+    const paddingX = 28;
+    const paddingY = 28;
+    const minX = Math.min(...xs) - paddingX;
+    const maxX = Math.max(...xs) + paddingX;
+    const minY = Math.min(...ys) - paddingY;
+    const maxY = Math.max(...ys) + paddingY;
+
+    return {
+      minX,
+      minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+  }, [
+    bowY,
+    entryBottomControl.x,
+    entryBottomControl.y,
+    entryTopControl.x,
+    entryTopControl.y,
+    leftMidshipX,
+    leftTransomX,
+    midshipY,
+    mode,
+    pointA.x,
+    pointA.y,
+    pointB.x,
+    pointB.y,
+    pointC.x,
+    pointC.y,
+    pointCBase.x,
+    pointCBase.y,
+    rightMidshipX,
+    rightTransomX,
+    sternY,
+    windPoint.x,
+    windPoint.y,
+  ]);
 
   const labels = useMemo(
     () => ({
@@ -213,13 +292,21 @@ export const BoatDiagram = ({ controls }: BoatDiagramProps) => {
 
   return (
     <svg
-      viewBox="-200 0 840 440"
+      viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Схема мачты, гика и грота"
       className="diagram"
       onClick={() => setSelectedElement(null)}
     >
-      <rect x="0" y="0" width="520" height="440" rx="24" className="diagram__board" />
+      <rect
+        x={viewBox.minX}
+        y={viewBox.minY}
+        width={viewBox.width}
+        height={viewBox.height}
+        rx="24"
+        className="diagram__board"
+      />
 
       <line x1="40" y1={MAST.y} x2="480" y2={MAST.y} className="diagram__axis" />
       <line x1={MAST.x} y1="40" x2={MAST.x} y2="400" className="diagram__axis" />

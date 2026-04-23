@@ -111,6 +111,7 @@ const CONTROL_CONFIG = [
 function App() {
   const [controls, setControls] = useState<RigControls>(INITIAL_CONTROLS);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const deviceWind = useDeviceWindAngle();
 
   const primaryControls = useMemo(
@@ -123,13 +124,14 @@ function App() {
   );
 
   useEffect(() => {
-    if (!isSettingsOpen) {
+    if (!isSettingsOpen && !isFullscreenOpen) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsSettingsOpen(false);
+        setIsFullscreenOpen(false);
       }
     };
 
@@ -138,7 +140,7 @@ function App() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isSettingsOpen]);
+  }, [isFullscreenOpen, isSettingsOpen]);
 
   useEffect(() => {
     if (!deviceWind.isEnabled || deviceWind.angle === null) {
@@ -190,6 +192,24 @@ function App() {
         <button
           type="button"
           className="settings-button"
+          onClick={() => setIsFullscreenOpen(true)}
+          aria-label="Открыть схему на весь экран"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="settings-button__icon">
+            <path
+              d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>Во весь экран</span>
+        </button>
+        <button
+          type="button"
+          className="settings-button"
           onClick={() => setIsSettingsOpen(true)}
           aria-label="Открыть настройки"
         >
@@ -209,7 +229,7 @@ function App() {
 
       <section className="diagram-stack">
         <div className="panel panel--diagram">
-          <BoatDiagram controls={controls} />
+          <BoatDiagram controls={controls} mode="embedded" />
         </div>
 
         <section className="panel panel--primary-controls">
@@ -286,6 +306,33 @@ function App() {
           </div>
         </section>
       </section>
+
+      {isFullscreenOpen ? (
+        <div
+          className="fullscreen-overlay"
+          onClick={() => setIsFullscreenOpen(false)}
+        >
+          <section
+            className="fullscreen-overlay__panel"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="fullscreen-overlay__header">
+              <h2>Схема яхты</h2>
+              <button
+                type="button"
+                className="settings-modal__close"
+                onClick={() => setIsFullscreenOpen(false)}
+                aria-label="Закрыть полноэкранный режим"
+              >
+                x
+              </button>
+            </div>
+            <div className="fullscreen-overlay__diagram">
+              <BoatDiagram controls={controls} mode="fullscreen" />
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {isSettingsOpen ? (
         <div
