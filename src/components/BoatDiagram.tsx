@@ -19,6 +19,18 @@ type BoatDiagramProps = {
 };
 
 const MAST = { x: 220, y: 220 };
+const EMBEDDED_VIEWBOX = {
+  minX: -200,
+  minY: 0,
+  width: 840,
+  height: 440,
+};
+const FULLSCREEN_VIEWBOX = {
+  minX: -60,
+  minY: -5,
+  width: 560,
+  height: 390,
+};
 type SelectedElement =
   | "pointA"
   | "pointB"
@@ -127,78 +139,11 @@ export const BoatDiagram = ({
 
   const viewBox = useMemo(() => {
     if (mode === "embedded") {
-      return {
-        minX: -200,
-        minY: 0,
-        width: 840,
-        height: 440,
-      };
+      return EMBEDDED_VIEWBOX;
     }
 
-    const xs = [
-      pointA.x,
-      pointB.x,
-      pointCBase.x,
-      pointC.x,
-      windPoint.x,
-      MAST.x,
-      leftMidshipX,
-      rightMidshipX,
-      leftTransomX,
-      rightTransomX,
-      entryTopControl.x,
-      entryBottomControl.x,
-    ];
-    const ys = [
-      pointA.y,
-      pointB.y,
-      pointCBase.y,
-      pointC.y,
-      windPoint.y,
-      bowY,
-      sternY,
-      midshipY,
-      entryTopControl.y,
-      entryBottomControl.y,
-    ];
-
-    const paddingX = 28;
-    const paddingY = 28;
-    const minX = Math.min(...xs) - paddingX;
-    const maxX = Math.max(...xs) + paddingX;
-    const minY = Math.min(...ys) - paddingY;
-    const maxY = Math.max(...ys) + paddingY;
-
-    return {
-      minX,
-      minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    };
-  }, [
-    bowY,
-    entryBottomControl.x,
-    entryBottomControl.y,
-    entryTopControl.x,
-    entryTopControl.y,
-    leftMidshipX,
-    leftTransomX,
-    midshipY,
-    mode,
-    pointA.x,
-    pointA.y,
-    pointB.x,
-    pointB.y,
-    pointC.x,
-    pointC.y,
-    pointCBase.x,
-    pointCBase.y,
-    rightMidshipX,
-    rightTransomX,
-    sternY,
-    windPoint.x,
-    windPoint.y,
-  ]);
+    return FULLSCREEN_VIEWBOX;
+  }, [mode]);
 
   const labels = useMemo(
     () => ({
