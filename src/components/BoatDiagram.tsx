@@ -19,17 +19,13 @@ type BoatDiagramProps = {
 };
 
 const MAST = { x: 220, y: 220 };
-const EMBEDDED_VIEWBOX = {
-  minX: -200,
-  minY: 0,
-  width: 840,
-  height: 440,
+const EMBEDDED_VIEWBOX_SIZE = {
+  width: 350,
+  height: 350,
 };
-const FULLSCREEN_VIEWBOX = {
-  minX: -60,
-  minY: -5,
-  width: 560,
-  height: 390,
+const FULLSCREEN_VIEWBOX_SIZE = {
+  width: 320,
+  height: 365,
 };
 type SelectedElement =
   | "pointA"
@@ -46,6 +42,12 @@ type SelectedElement =
   | null;
 
 const format = (value: number) => value.toFixed(1);
+const createCenteredViewBox = (width: number, height: number) => ({
+  minX: MAST.x - width / 2,
+  minY: MAST.y - height / 2,
+  width,
+  height,
+});
 
 export const BoatDiagram = ({
   controls,
@@ -139,10 +141,16 @@ export const BoatDiagram = ({
 
   const viewBox = useMemo(() => {
     if (mode === "embedded") {
-      return EMBEDDED_VIEWBOX;
+      return createCenteredViewBox(
+        EMBEDDED_VIEWBOX_SIZE.width,
+        EMBEDDED_VIEWBOX_SIZE.height,
+      );
     }
 
-    return FULLSCREEN_VIEWBOX;
+    return createCenteredViewBox(
+      FULLSCREEN_VIEWBOX_SIZE.width,
+      FULLSCREEN_VIEWBOX_SIZE.height,
+    );
   }, [mode]);
 
   const labels = useMemo(
@@ -253,8 +261,6 @@ export const BoatDiagram = ({
         className="diagram__board"
       />
 
-      <line x1="40" y1={MAST.y} x2="480" y2={MAST.y} className="diagram__axis" />
-      <line x1={MAST.x} y1="40" x2={MAST.x} y2="400" className="diagram__axis" />
       <line
         x1={MAST.x}
         y1={MAST.y}
@@ -272,61 +278,6 @@ export const BoatDiagram = ({
         onClick={(event) => {
           event.stopPropagation();
           setSelectedElement("hull");
-        }}
-      />
-      <line
-        x1={MAST.x}
-        y1={bowY}
-        x2={entryTopControl.x}
-        y2={entryTopControl.y}
-        className={`diagram__guide${selectedElement === "entry" ? " diagram__guide--active" : ""}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setSelectedElement("entry");
-        }}
-      />
-      <line
-        x1={MAST.x}
-        y1={bowY}
-        x2={entryBottomControl.x}
-        y2={entryBottomControl.y}
-        className={`diagram__guide${selectedElement === "entry" ? " diagram__guide--active" : ""}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setSelectedElement("entry");
-        }}
-      />
-      <line
-        x1={leftMidshipX}
-        y1={midshipY}
-        x2={rightMidshipX}
-        y2={midshipY}
-        className={`diagram__guide${selectedElement === "midship" ? " diagram__guide--active" : ""}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setSelectedElement("midship");
-        }}
-      />
-      <line
-        x1={leftTransomX}
-        y1={sternY}
-        x2={rightTransomX}
-        y2={sternY}
-        className={`diagram__guide${selectedElement === "transom" ? " diagram__guide--active" : ""}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setSelectedElement("transom");
-        }}
-      />
-      <line
-        x1={MAST.x}
-        y1={Math.min(MAST.y, midshipY)}
-        x2={MAST.x}
-        y2={Math.max(MAST.y, midshipY)}
-        className={`diagram__offset${selectedElement === "mastOffset" ? " diagram__offset--active" : ""}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setSelectedElement("mastOffset");
         }}
       />
 

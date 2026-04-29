@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { BoatDiagram, type RigControls } from "./components/BoatDiagram";
 import { useDeviceWindAngle } from "./hooks/useDeviceWindAngle";
+import { getCourseInfo } from "./lib/sailing";
 
 const INITIAL_CONTROLS: RigControls = {
-  boomLength: 180,
+  boomLength: 160,
   boomAngle: -25,
   windAngle: 50,
   controlPointPercent: 35,
@@ -45,7 +46,7 @@ const CONTROL_CONFIG = [
   },
   {
     key: "controlPointPercent",
-    label: "Положение точки C",
+    label: "Положение пуза грота",
     min: 10,
     max: 90,
     step: 1,
@@ -110,9 +111,44 @@ const CONTROL_CONFIG = [
 
 function App() {
   const [controls, setControls] = useState<RigControls>(INITIAL_CONTROLS);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"controls" | "settings">("controls");
   const deviceWind = useDeviceWindAngle();
+  const apparentWindAngle = Math.abs(controls.windAngle);
+  const courseInfo = useMemo(
+    () => getCourseInfo(apparentWindAngle),
+    [apparentWindAngle],
+  );
+  const tackPhrase = useMemo(() => {
+    if (controls.windAngle > 0) {
+      return "правого галса";
+    }
+
+    if (controls.windAngle < 0) {
+      return "левого галса";
+    }
+
+    return null;
+  }, [controls.windAngle]);
+  const courseModeLabel = useMemo(() => {
+    if (courseInfo.name === "Бейдевинд") {
+      return apparentWindAngle < 47.5 ? "Крутой" : "Полный";
+    }
+
+    if (courseInfo.name === "Бакштаг") {
+      return apparentWindAngle < 140 ? "Крутой" : "Полный";
+    }
+
+    return null;
+  }, [apparentWindAngle, courseInfo.name]);
+  const courseSummary = useMemo(() => {
+    const parts = [
+      courseModeLabel,
+      courseInfo.name,
+      tackPhrase,
+    ].filter(Boolean);
+
+    return parts.join(" ");
+  }, [courseInfo.name, courseModeLabel, tackPhrase]);
 
   const primaryControls = useMemo(
     () => CONTROL_CONFIG.filter((item) => item.primary),
@@ -122,25 +158,6 @@ function App() {
     () => CONTROL_CONFIG.filter((item) => !item.primary),
     [],
   );
-
-  useEffect(() => {
-    if (!isSettingsOpen && !isFullscreenOpen) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsSettingsOpen(false);
-        setIsFullscreenOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isFullscreenOpen, isSettingsOpen]);
 
   useEffect(() => {
     if (!deviceWind.isEnabled || deviceWind.angle === null) {
@@ -188,177 +205,117 @@ function App() {
 
   return (
     <main className="page">
-      <div className="page__toolbar">
-        <button
-          type="button"
-          className="settings-button"
-          onClick={() => setIsFullscreenOpen(true)}
-          aria-label="Открыть схему на весь экран"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="settings-button__icon">
-            <path
-              d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span>Во весь экран</span>
-        </button>
-        <button
-          type="button"
-          className="settings-button"
-          onClick={() => setIsSettingsOpen(true)}
-          aria-label="Открыть настройки"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="settings-button__icon">
-            <path
-              d="M10.9 2.4h2.2l.5 2a7.9 7.9 0 0 1 1.8.8l1.8-1.1 1.6 1.6-1.1 1.8c.3.6.6 1.2.8 1.8l2 .5v2.2l-2 .5a7.9 7.9 0 0 1-.8 1.8l1.1 1.8-1.6 1.6-1.8-1.1a7.9 7.9 0 0 1-1.8.8l-.5 2h-2.2l-.5-2a7.9 7.9 0 0 1-1.8-.8l-1.8 1.1-1.6-1.6 1.1-1.8a7.9 7.9 0 0 1-.8-1.8l-2-.5V10l2-.5a7.9 7.9 0 0 1 .8-1.8L4.4 5.9 6 4.3l1.8 1.1a7.9 7.9 0 0 1 1.8-.8l.5-2Z"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinejoin="round"
-            />
-            <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-          </svg>
-          <span>Настройки</span>
-        </button>
-      </div>
-
       <section className="diagram-stack">
         <div className="panel panel--diagram">
           <BoatDiagram controls={controls} mode="embedded" />
         </div>
 
-        <section className="panel panel--primary-controls">
-          <h2>Параметры под схемой</h2>
-          <div className="primary-control-grid">
-            {primaryControls.map((item) => (
-              <label key={item.key} className="control">
-                <span className="control__header">
-                  <span>{item.label}</span>
-                  <strong>
-                    {controls[item.key]}
-                    {item.unit}
-                  </strong>
-                </span>
-                <input
-                  type="range"
-                  min={item.min}
-                  max={item.max}
-                  step={item.step}
-                  value={controls[item.key]}
-                  disabled={deviceWind.isEnabled}
-                  onChange={(event) =>
-                    updateControl(item.key, Number(event.target.value))
-                  }
-                />
-              </label>
-            ))}
-          </div>
-
-          <div className="sensor-bar">
-            <div className="sensor-bar__copy">
-              <strong>Поворот телефона</strong>
-              <span>
-                {deviceWind.isEnabled
-                  ? "Угол ветра управляется датчиком устройства."
-                  : "Можно привязать угол ветра к повороту телефона."}
-              </span>
-              {deviceWind.error ? (
-                <span className="sensor-bar__message">{deviceWind.error}</span>
-              ) : null}
-            </div>
-
-            <div className="sensor-bar__actions">
-              {deviceWind.isEnabled ? (
-                <>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => deviceWind.calibrate()}
-                  >
-                    Переустановить ноль
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => deviceWind.disable()}
-                  >
-                    Отключить датчик
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  disabled={!deviceWind.isSupported}
-                  onClick={() => {
-                    void deviceWind.enable();
-                  }}
-                >
-                  Включить поворот телефона
-                </button>
-              )}
-            </div>
-          </div>
+        <section
+          className="panel panel--course-info"
+          style={{ borderColor: `${courseInfo.accent}66` }}
+        >
+          <p className="course-info__summary" style={{ color: courseInfo.accent }}>
+            {courseSummary}
+          </p>
+          <p className="course-info__angle">
+            Угол к ветру {Math.round(apparentWindAngle)}°
+          </p>
+          <p className="course-info__description">{courseInfo.description}</p>
         </section>
-      </section>
 
-      {isFullscreenOpen ? (
-        <div
-          className="fullscreen-overlay"
-          onClick={() => setIsFullscreenOpen(false)}
-        >
-          <section
-            className="fullscreen-overlay__panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="fullscreen-overlay__header">
-              <h2>Схема яхты</h2>
+        <section className="panel panel--primary-controls">
+          <div className="panel--primary-controls__header">
+            <div className="tab-switcher" role="tablist" aria-label="Переключение панели параметров">
               <button
                 type="button"
-                className="settings-modal__close"
-                onClick={() => setIsFullscreenOpen(false)}
-                aria-label="Закрыть полноэкранный режим"
+                role="tab"
+                aria-selected={activeTab === "controls"}
+                className={`tab-switcher__button${activeTab === "controls" ? " tab-switcher__button--active" : ""}`}
+                onClick={() => setActiveTab("controls")}
               >
-                x
+                Управление
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "settings"}
+                className={`tab-switcher__button${activeTab === "settings" ? " tab-switcher__button--active" : ""}`}
+                onClick={() => setActiveTab("settings")}
+              >
+                Настройки
               </button>
             </div>
-            <div className="fullscreen-overlay__diagram">
-              <BoatDiagram controls={controls} mode="fullscreen" />
-            </div>
-          </section>
-        </div>
-      ) : null}
+          </div>
 
-      {isSettingsOpen ? (
-        <div
-          className="settings-modal-backdrop"
-          onClick={() => setIsSettingsOpen(false)}
-        >
-          <section
-            className="settings-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="settings-modal__header">
-              <div>
-                <h2>Настройки</h2>
-                <p>Изменения сразу видны на схеме под модальным окном.</p>
+          {activeTab === "controls" ? (
+            <>
+              <div className="primary-control-grid">
+                {primaryControls.map((item) => (
+                  <label key={item.key} className="control">
+                    <span className="control__header">
+                      <span>{item.label}</span>
+                      <strong>
+                        {controls[item.key]}
+                        {item.unit}
+                      </strong>
+                    </span>
+                    <input
+                      type="range"
+                      min={item.min}
+                      max={item.max}
+                      step={item.step}
+                      value={controls[item.key]}
+                      disabled={deviceWind.isEnabled}
+                      onChange={(event) =>
+                        updateControl(item.key, Number(event.target.value))
+                      }
+                    />
+                  </label>
+                ))}
               </div>
-              <button
-                type="button"
-                className="settings-modal__close"
-                onClick={() => setIsSettingsOpen(false)}
-                aria-label="Закрыть настройки"
-              >
-                x
-              </button>
-            </div>
 
-            <div className="control-grid control-grid--modal">
+              <div className="sensor-bar">
+                <div className="sensor-bar__copy">
+                  {deviceWind.error ? (
+                    <span className="sensor-bar__message">{deviceWind.error}</span>
+                  ) : null}
+                </div>
+
+                <div className="sensor-bar__actions">
+                  {deviceWind.isEnabled ? (
+                    <>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => deviceWind.calibrate()}
+                      >
+                        Переустановить ноль
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => deviceWind.disable()}
+                      >
+                        Отключить
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={!deviceWind.isSupported}
+                      onClick={() => {
+                        void deviceWind.enable();
+                      }}
+                    >
+                      Включить поворот телефона
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="control-grid control-grid--inline">
               {advancedControls.map((item) => (
                 <label key={item.key} className="control">
                   <span className="control__header">
@@ -381,9 +338,9 @@ function App() {
                 </label>
               ))}
             </div>
-          </section>
-        </div>
-      ) : null}
+          )}
+        </section>
+      </section>
     </main>
   );
 }
