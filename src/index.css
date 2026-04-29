@@ -88,6 +88,8 @@ input {
 .panel--course-info {
   display: grid;
   gap: 6px;
+  min-height: 140px;
+  align-content: start;
 }
 
 .course-info__summary {
@@ -159,12 +161,12 @@ input {
   max-width: none;
   max-height: none;
   display: block;
+  background: rgba(8, 47, 73, 0.24);
 }
 
 .diagram__board {
-  fill: rgba(8, 47, 73, 0.24);
-  stroke: rgba(125, 211, 252, 0.18);
-  stroke-width: 1.5;
+  fill: transparent;
+  stroke: none;
 }
 
 .diagram__axis {

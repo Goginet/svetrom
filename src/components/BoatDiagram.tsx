@@ -280,6 +280,17 @@ export const BoatDiagram = ({
           setSelectedElement("hull");
         }}
       />
+      <line
+        x1={MAST.x}
+        y1={Math.min(MAST.y, midshipY)}
+        x2={MAST.x}
+        y2={Math.max(MAST.y, midshipY)}
+        className={`diagram__offset${selectedElement === "mastOffset" ? " diagram__offset--active" : ""}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          setSelectedElement("mastOffset");
+        }}
+      />
 
       <path
         d={sailPath}
